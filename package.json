@@ -1,0 +1,25 @@
+{
+  "name": "codebridge",
+  "version": "1.0.0",
+  "description": "A working, tested MVP of the relay-based (server-mediated) transfer path from the CodeBridge project plan: no accounts, no installs, code/QR pairing, sender approval, one-time download tokens, and automatic file/session deletion.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.20.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.0",
+    "express": "^5.2.1",
+    "mongodb": "^7.6.0",
+    "mongoose": "^9.10.1",
+    "multer": "^2.4.0",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
+    "uuid": "^14.0.2"
+  }
+}

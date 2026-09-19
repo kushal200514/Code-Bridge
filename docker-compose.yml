@@ -1,0 +1,25 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      CODEBRIDGE_REDIS_URL: redis://redis:6379/0
+      CODEBRIDGE_STORAGE_DIR: /data/storage
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    volumes:
+      - storage-data:/data/storage
+
+volumes:
+  redis-data:
+  storage-data:
