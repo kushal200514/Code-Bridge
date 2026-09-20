@@ -2,6 +2,7 @@ import axios from "axios";
 import { io } from "socket.io-client";
 import "./App.css";
 import { useState, useEffect } from "react";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 function App() {
 
@@ -74,7 +75,7 @@ function App() {
 
     const connectToTransferSocket = (transferId) => {
 
-        const socket = io("http://localhost:5000");
+        const socket = io(API_URL);
 
         socket.on("connect", () => {
 
@@ -120,9 +121,7 @@ const connectReceiverSocket = (
     receiverToken
 ) => {
 
-    const socket = io(
-        "http://localhost:5000"
-    );
+    const socket = io(API_URL);
 
     socket.on("connect", () => {
 
@@ -156,7 +155,7 @@ const connectReceiverSocket = (
 
                 const response =
                     await axios.get(
-                        `http://localhost:5000/api/transfers/${transferId}/files`,
+                        `${API_URL}/api/transfers/${transferId}/files`,
                         {
                             params: {
                                 receiver_token:
@@ -215,7 +214,7 @@ const connectReceiverSocket = (
             setReceiverConnected(false);
 
             const response = await axios.post(
-                "http://localhost:5000/api/transfers"
+                `${API_URL}/api/transfers`
             );
 
             const transferData = response.data;
@@ -229,7 +228,7 @@ const connectReceiverSocket = (
 
             // Get QR code
             const qrResponse = await axios.get(
-                `http://localhost:5000/api/transfers/${transferData.transfer_id}/qr`
+                `${API_URL}/api/transfers/${transferData.transfer_id}/qr`
             );
 
             setQrCode(
@@ -315,7 +314,7 @@ const connectReceiverSocket = (
             );
 
             const response = await axios.post(
-                `http://localhost:5000/api/transfers/${transfer.transfer_id}/files`,
+                `${API_URL}/api/transfers/${transfer.transfer_id}/files`,
                 formData
             );
 
@@ -370,7 +369,7 @@ const connectReceiverSocket = (
             // Join transfer
             const joinResponse =
                 await axios.post(
-                    "http://localhost:5000/api/transfers/join",
+                    `${API_URL}/api/transfers/join`,
                     {
                         code: receiverCode
                     }
@@ -382,7 +381,7 @@ const connectReceiverSocket = (
             // Get files
             const filesResponse =
                 await axios.get(
-                    `http://localhost:5000/api/transfers/${joinedTransfer.transfer_id}/files`,
+                    `${API_URL}/api/transfers/${joinedTransfer.transfer_id}/files`,
                     {
                         params: {
                             receiver_token:
@@ -442,7 +441,7 @@ const connectReceiverSocket = (
         }
 
         const downloadUrl =
-            `http://localhost:5000/api/transfers/${receiverTransfer.transfer_id}/files/${file.id}?receiver_token=${receiverTransfer.receiver_token}`;
+            `${API_URL}/api/transfers/${receiverTransfer.transfer_id}/files/${file.id}?receiver_token=${receiverTransfer.receiver_token}`;
 
         window.open(
             downloadUrl,
