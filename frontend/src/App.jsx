@@ -854,11 +854,12 @@ function App() {
                             )}
 
                             {/* Drag and Drop File Selector */}
-                            <label className="dropzone">
+                            <label className="dropzone" htmlFor="file-upload-input">
                                 <div className="dropzone-icon">📁</div>
                                 <div className="dropzone-text">Click or drag & drop files to select</div>
                                 <div className="dropzone-sub">Max 10 files • Up to 100MB per file • 250MB transfer quota</div>
                                 <input
+                                    id="file-upload-input"
                                     type="file"
                                     multiple
                                     onChange={handleFileSelect}
