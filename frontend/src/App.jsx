@@ -103,15 +103,15 @@ function App() {
             setTimeLeft(remaining);
 
             if (remaining === 0) {
-                if (transfer) setTransfer(prev => ({ ...prev, expired: true }));
-                if (receiverTransfer) setReceiverStatus("expired");
+                setTransfer(prev => (prev && !prev.expired ? { ...prev, expired: true } : prev));
+                setReceiverStatus(prev => (prev !== "expired" ? "expired" : prev));
             }
         };
 
         updateCountdown();
         const interval = setInterval(updateCountdown, 1000);
         return () => clearInterval(interval);
-    }, [transfer, receiverTransfer]);
+    }, [transfer?.expires_at, receiverTransfer?.expires_at]);
 
     // ==================================================
     // Socket.IO Connection & Event Handlers
