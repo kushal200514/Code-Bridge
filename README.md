@@ -42,7 +42,8 @@ graph TD
 | **One-Time Atomic Download** | ✅ Active | Atomic `findOneAndUpdate` prevents concurrent race-condition duplicate downloads. |
 | **10-Minute Ephemeral Lifecycle** | ✅ Active | Real-time countdown timer; automated background service purges expired files and database records every 60s. |
 | **Rate Limiting & Anti-Brute Force** | ✅ Active | Strict IP-based throttling on join attempts (10 per 15 min), transfer creation limits, and generic error messages. |
-| **Transfer Password Protection** | ✅ Active | Optional salted bcrypt password hashing required before receiver approval. |
+| **Transfer Password Protection** | ✅ Active | Optional salted bcrypt password hashing required before receiver approval with toggleable show/hide masking. |
+| **Shoulder-Surfing Protection** | ✅ Active | Toggleable masking (`👁️` / `🙈`) for passwords, 6-digit transfer codes, and receiver code inputs to protect against screen-sharing and public viewing. |
 | **Secure Token Management** | ✅ Active | Session & receiver tokens stored exclusively as SHA-256 hashes; compared with `crypto.timingSafeEqual`. |
 | **End-to-End Encryption (E2EE)** | ✅ Active | Web Crypto API AES-256-GCM. Files encrypted in sender's browser; server handles ciphertext only (Zero-Knowledge). |
 | **AI Privacy Guard** | ✅ Active | Client-side & backend heuristic scanner detecting AWS keys, private keys, JWTs, emails, phone numbers, and SSNs. |
