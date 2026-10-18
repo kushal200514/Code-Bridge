@@ -38,6 +38,7 @@ function App() {
     const [e2eKey, setE2eKey] = useState(null);
 
     const [transfer, setTransfer] = useState(null);
+    const [showTransferCode, setShowTransferCode] = useState(true);
     const [qrCode, setQrCode] = useState(null);
     const [joinUrl, setJoinUrl] = useState("");
     const [timeLeft, setTimeLeft] = useState(0);
@@ -63,6 +64,7 @@ function App() {
         const joinParam = new URLSearchParams(window.location.search).get("join");
         return joinParam && /^\d{6}$/.test(joinParam) ? joinParam : "";
     });
+    const [showReceiverCodeInput, setShowReceiverCodeInput] = useState(true);
     const [receiverPassword, setReceiverPassword] = useState("");
     const [showReceiverPassword, setShowReceiverPassword] = useState(false);
     const [needsPasswordInput, setNeedsPasswordInput] = useState(false);
@@ -680,13 +682,36 @@ function App() {
                                 </p>
 
                                 <div style={{ marginBottom: "24px" }}>
-                                    <div style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "8px" }}>
-                                        Fast pairing via 6-digit code:
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                        <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+                                            Fast pairing via 6-digit code:
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowReceiverCodeInput(!showReceiverCodeInput)}
+                                            style={{
+                                                background: "transparent",
+                                                border: "none",
+                                                color: "var(--text-muted)",
+                                                cursor: "pointer",
+                                                fontSize: "12px",
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "4px",
+                                                padding: "2px 6px",
+                                                borderRadius: "4px"
+                                            }}
+                                            title={showReceiverCodeInput ? "Hide code" : "Show code"}
+                                            aria-label={showReceiverCodeInput ? "Hide code" : "Show code"}
+                                        >
+                                            {showReceiverCodeInput ? "🙈 Hide" : "👁️ Show"}
+                                        </button>
                                     </div>
-                                    <div style={{ display: "flex", gap: "8px" }}>
+                                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                                         <input
-                                            type="text"
+                                            type={showReceiverCodeInput ? "text" : "password"}
                                             maxLength={6}
+                                            autoComplete="off"
                                             placeholder="000000"
                                             value={receiverCode}
                                             onChange={(e) => setReceiverCode(e.target.value.replace(/\D/g, ""))}
@@ -695,7 +720,7 @@ function App() {
                                                 background: "var(--bg-input)",
                                                 border: "1px solid var(--border-subtle)",
                                                 borderRadius: "8px",
-                                                padding: "10px 14px",
+                                                padding: "10px 42px 10px 14px",
                                                 fontFamily: "var(--mono)",
                                                 fontSize: "18px",
                                                 letterSpacing: "4px",
@@ -703,6 +728,28 @@ function App() {
                                                 textAlign: "center"
                                             }}
                                         />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowReceiverCodeInput(!showReceiverCodeInput)}
+                                            style={{
+                                                position: "absolute",
+                                                right: "8px",
+                                                background: "transparent",
+                                                border: "none",
+                                                color: "var(--text-muted)",
+                                                cursor: "pointer",
+                                                fontSize: "16px",
+                                                padding: "6px 8px",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                borderRadius: "6px"
+                                            }}
+                                            title={showReceiverCodeInput ? "Hide code" : "Show code"}
+                                            aria-label={showReceiverCodeInput ? "Hide code" : "Show code"}
+                                        >
+                                            {showReceiverCodeInput ? "🙈" : "👁️"}
+                                        </button>
                                     </div>
                                 </div>
 
@@ -806,9 +853,64 @@ function App() {
 
                             {/* Transfer Code Display */}
                             <div className="code-box">
-                                <div className="code-title">Temporary Transfer Code</div>
-                                <div className="code-display">{transfer.code}</div>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                                    <div className="code-title" style={{ margin: 0 }}>Temporary Transfer Code</div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowTransferCode(!showTransferCode)}
+                                        style={{
+                                            background: "transparent",
+                                            border: "none",
+                                            color: "var(--text-secondary)",
+                                            cursor: "pointer",
+                                            fontSize: "12px",
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: "4px",
+                                            padding: "2px 6px",
+                                            borderRadius: "4px"
+                                        }}
+                                        title={showTransferCode ? "Hide transfer code" : "Show transfer code"}
+                                        aria-label={showTransferCode ? "Hide transfer code" : "Show transfer code"}
+                                    >
+                                        {showTransferCode ? "🙈 Hide" : "👁️ Show"}
+                                    </button>
+                                </div>
+                                <div
+                                    className="code-display"
+                                    onClick={() => setShowTransferCode(!showTransferCode)}
+                                    title={showTransferCode ? "Click to hide code" : "Click to show code"}
+                                    style={{
+                                        cursor: "pointer",
+                                        userSelect: "none",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        gap: "14px"
+                                    }}
+                                >
+                                    <span>{showTransferCode ? transfer.code : "••••••"}</span>
+                                    <span
+                                        style={{
+                                            fontSize: "22px",
+                                            opacity: 0.7,
+                                            letterSpacing: "normal",
+                                            verticalAlign: "middle"
+                                        }}
+                                        aria-hidden="true"
+                                    >
+                                        {showTransferCode ? "🙈" : "👁️"}
+                                    </span>
+                                </div>
                                 <div className="code-actions">
+                                    <button
+                                        type="button"
+                                        className="action-pill-btn"
+                                        onClick={() => setShowTransferCode(!showTransferCode)}
+                                        title={showTransferCode ? "Hide transfer code" : "Show transfer code"}
+                                    >
+                                        {showTransferCode ? "🙈 Hide Code" : "👁️ Show Code"}
+                                    </button>
                                     <button
                                         className="action-pill-btn"
                                         onClick={() => copyToClipboard(transfer.code, "Code copied!")}
@@ -979,15 +1081,29 @@ function App() {
                             {/* Subview 3A: Enter 6-digit Code */}
                             {!receiverTransfer && (
                                 <div>
-                                    <h2 style={{ fontSize: "22px", fontWeight: 700, marginBottom: "8px" }}>Receive Files</h2>
-                                    <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "24px" }}>
-                                        Enter the 6-digit code shown on the sender's screen.
-                                    </p>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                                        <div>
+                                            <h2 style={{ fontSize: "22px", fontWeight: 700, marginBottom: "8px" }}>Receive Files</h2>
+                                            <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "20px" }}>
+                                                Enter the 6-digit code shown on the sender's screen.
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="action-pill-btn"
+                                            onClick={() => setShowReceiverCodeInput(!showReceiverCodeInput)}
+                                            title={showReceiverCodeInput ? "Hide code" : "Show code"}
+                                            style={{ marginTop: "4px" }}
+                                        >
+                                            {showReceiverCodeInput ? "🙈 Hide Code" : "👁️ Show Code"}
+                                        </button>
+                                    </div>
 
-                                    <div style={{ marginBottom: "20px" }}>
+                                    <div style={{ position: "relative", display: "flex", alignItems: "center", marginBottom: "20px" }}>
                                         <input
-                                            type="text"
+                                            type={showReceiverCodeInput ? "text" : "password"}
                                             maxLength={6}
+                                            autoComplete="off"
                                             placeholder="000000"
                                             value={receiverCode}
                                             onChange={(e) => setReceiverCode(e.target.value.replace(/\D/g, ""))}
@@ -996,7 +1112,7 @@ function App() {
                                                 background: "var(--bg-input)",
                                                 border: "1px solid var(--border-subtle)",
                                                 borderRadius: "12px",
-                                                padding: "16px",
+                                                padding: "16px 52px 16px 16px",
                                                 fontFamily: "var(--mono)",
                                                 fontSize: "32px",
                                                 letterSpacing: "8px",
@@ -1004,6 +1120,28 @@ function App() {
                                                 textAlign: "center"
                                             }}
                                         />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowReceiverCodeInput(!showReceiverCodeInput)}
+                                            style={{
+                                                position: "absolute",
+                                                right: "14px",
+                                                background: "transparent",
+                                                border: "none",
+                                                color: "var(--text-muted)",
+                                                cursor: "pointer",
+                                                fontSize: "20px",
+                                                padding: "8px",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                borderRadius: "8px"
+                                            }}
+                                            title={showReceiverCodeInput ? "Hide code" : "Show code"}
+                                            aria-label={showReceiverCodeInput ? "Hide code" : "Show code"}
+                                        >
+                                            {showReceiverCodeInput ? "🙈" : "👁️"}
+                                        </button>
                                     </div>
 
                                     {needsPasswordInput && (
