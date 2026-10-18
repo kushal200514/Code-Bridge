@@ -4,16 +4,21 @@
   "description": "A working, tested MVP of the relay-based (server-mediated) transfer path from the CodeBridge project plan: no accounts, no installs, code/QR pairing, sender approval, one-time download tokens, and automatic file/session deletion.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "test": "node --test test/**/*.test.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1152.0",
     "axios": "^1.20.0",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^18.0.0",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0",
     "mongodb": "^7.6.0",
     "mongoose": "^9.10.1",
     "multer": "^2.4.0",
@@ -21,5 +26,10 @@
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "uuid": "^14.0.2"
+  },
+  "devDependencies": {
+    "jest": "^30.5.2",
+    "mongodb-memory-server": "^11.3.0",
+    "supertest": "^7.3.1"
   }
 }
