@@ -221,12 +221,16 @@ function App() {
             const data = response.data;
             setTransfer(data);
 
-            // Fetch QR Code
-            const qrRes = await axios.get(`${API_URL}/api/transfers/${data.transfer_id}/qr`);
+            // Fetch QR Code with active origin so QR scans load the current deployment
+            const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
+            const qrRes = await axios.get(`${API_URL}/api/transfers/${data.transfer_id}/qr`, {
+                params: { origin: currentOrigin }
+            });
             setQrCode(qrRes.data.qr_code);
 
-            // Construct Join URL with #key if E2EE
-            let shareableUrl = qrRes.data.join_url;
+            // Construct Join URL using current active origin (or live link) with #key if E2EE
+            const baseOrigin = currentOrigin || (qrRes.data.join_url ? qrRes.data.join_url.split("/?join=")[0] : "");
+            let shareableUrl = `${baseOrigin}/?join=${data.code}`;
             if (generatedE2E) {
                 shareableUrl += `#key=${generatedE2E.keyString}`;
             }

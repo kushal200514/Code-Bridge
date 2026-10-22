@@ -303,9 +303,21 @@ app.get("/api/transfers/:transferId/qr", async (req, res) => {
             return res.status(410).json({ success: false, message: "Transfer has expired" });
         }
 
-        // Encode join link with code (never encode secret bearer tokens in QR)
-        const frontendBase = process.env.FRONTEND_URL || "http://localhost:5173";
-        const joinUrl = `${frontendBase}/?join=${transfer.code}`;
+        // Determine frontend base URL dynamically (from query, headers, or env)
+        let clientOrigin = req.query.origin;
+        if (!clientOrigin) {
+            clientOrigin = req.get("origin");
+        }
+        if (!clientOrigin && req.get("referer")) {
+            try {
+                clientOrigin = new URL(req.get("referer")).origin;
+            } catch {
+                // Ignore malformed referer
+            }
+        }
+        const frontendBase = clientOrigin || process.env.FRONTEND_URL || "http://localhost:5173";
+        const sanitizedBase = frontendBase.replace(/\/$/, "");
+        const joinUrl = `${sanitizedBase}/?join=${transfer.code}`;
 
         // QR contains joinUrl for mobile camera convenience
         const qrImage = await QRCode.toDataURL(joinUrl);
