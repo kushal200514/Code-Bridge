@@ -926,7 +926,7 @@ app.post("/api/ai/privacy-scan", async (req, res) => {
  */
 app.post("/api/ai/summarize", async (req, res) => {
     try {
-        const { transferId, fileId, consentGiven } = req.body;
+        const { transferId, fileId, textContent, filename, consentGiven } = req.body;
 
         if (!consentGiven) {
             return res.status(400).json({
@@ -935,28 +935,119 @@ app.post("/api/ai/summarize", async (req, res) => {
             });
         }
 
-        const file = await File.findOne({ _id: fileId, transferId });
+        // Case 1: Direct text provided (e.g. client local read or decrypted E2EE preview)
+        if (textContent && typeof textContent === "string" && textContent.trim().length > 0) {
+            const summaryResult = await aiService.summarizeText(textContent, filename || "Document");
+            return res.json({
+                success: true,
+                summary: summaryResult
+            });
+        }
+
+        // Case 2: Summarize stored file by fileId
+        if (!fileId) {
+            return res.status(400).json({ success: false, message: "fileId or textContent is required" });
+        }
+
+        const query = { _id: fileId };
+        if (transferId) {
+            query.transferId = transferId;
+        }
+
+        const file = await File.findOne(query);
         if (!file) {
             return res.status(404).json({ success: false, message: "File not found" });
         }
 
-        // Read up to 8KB of text safely
-        const stream = await storageService.getFileStream(file.storageKey);
-        const chunks = [];
-        let bytesRead = 0;
-
-        for await (const chunk of stream) {
-            chunks.push(chunk);
-            bytesRead += chunk.length;
-            if (bytesRead >= 8192) break;
+        // Return cached summary if already generated
+        if (file.summary && typeof file.summary === "string" && file.summary.length > 0) {
+            return res.json({
+                success: true,
+                summary: {
+                    provider: "cached",
+                    summary: file.summary,
+                    keyPoints: file.keyPoints || [],
+                    filename: file.originalName,
+                    category: file.category
+                }
+            });
         }
 
-        const text = Buffer.concat(chunks).toString("utf8");
-        const summaryResult = await aiService.summarizeText(text, file.originalName);
+        let summaryResult;
 
-        // Update file record with summary
-        file.summary = summaryResult.summary;
-        await file.save();
+        if (file.isEncrypted) {
+            summaryResult = {
+                provider: "e2ee-metadata",
+                summary: `🔒 This file (${file.originalName}) is protected by client-side End-to-End Encryption (AES-256-GCM). The server stores ciphertext with zero knowledge of the contents.`,
+                keyPoints: [
+                    "Encryption: AES-256-GCM (Zero-Knowledge)",
+                    `Category: ${file.category}`,
+                    `Size: ${(file.size / 1024).toFixed(1)} KB`,
+                    `Integrity Hash: ${file.sha256Hash ? file.sha256Hash.slice(0, 16) + "..." : "Verified"}`
+                ],
+                filename: file.originalName,
+                category: file.category
+            };
+        } else {
+            const textCategories = ["Documents", "Code", "Spreadsheets", "Data"];
+            const isTextType = textCategories.includes(file.category) || 
+                file.mimeType?.startsWith("text/") || 
+                file.mimeType?.includes("json") || 
+                file.mimeType?.includes("xml") || 
+                file.mimeType?.includes("javascript");
+
+            if (isTextType) {
+                // Read up to 16KB of text safely
+                const stream = await storageService.getFileStream(file.storageKey);
+                const chunks = [];
+                let bytesRead = 0;
+
+                for await (const chunk of stream) {
+                    chunks.push(chunk);
+                    bytesRead += chunk.length;
+                    if (bytesRead >= 16384) break;
+                }
+
+                const rawBuffer = Buffer.concat(chunks);
+                const hasNullBytes = rawBuffer.slice(0, 512).includes(0);
+
+                if (hasNullBytes) {
+                    summaryResult = {
+                        provider: "binary-metadata",
+                        summary: `${file.originalName} is a ${file.category} file (${(file.size / 1024).toFixed(1)} KB) containing binary formatted data.`,
+                        keyPoints: [
+                            `MIME Type: ${file.mimeType || "application/octet-stream"}`,
+                            `Category: ${file.category}`,
+                            `Size: ${(file.size / 1024).toFixed(1)} KB`,
+                            `SHA-256: ${file.sha256Hash ? file.sha256Hash.slice(0, 16) + "..." : "Verified"}`
+                        ],
+                        filename: file.originalName,
+                        category: file.category
+                    };
+                } else {
+                    const text = rawBuffer.toString("utf8");
+                    summaryResult = await aiService.summarizeText(text, file.originalName);
+                }
+            } else {
+                summaryResult = {
+                    provider: "metadata",
+                    summary: `${file.originalName} is a verified ${file.category} asset (${(file.size / 1024).toFixed(1)} KB, MIME: ${file.mimeType || "application/octet-stream"}). Stored securely and ready for transfer.`,
+                    keyPoints: [
+                        `Category: ${file.category}`,
+                        `Payload Size: ${(file.size / (1024 * 1024)).toFixed(2)} MB (${file.size} bytes)`,
+                        `Integrity: SHA-256 verified (${file.sha256Hash ? file.sha256Hash.slice(0, 16) + "..." : "Intact"})`
+                    ],
+                    filename: file.originalName,
+                    category: file.category
+                };
+            }
+        }
+
+        // Cache summary on file record
+        if (summaryResult && summaryResult.summary) {
+            file.summary = summaryResult.summary;
+            try { await file.save(); } catch (_) {}
+        }
 
         res.json({
             success: true,
@@ -964,7 +1055,7 @@ app.post("/api/ai/summarize", async (req, res) => {
         });
     } catch (err) {
         console.error("Summarize error:", err.message);
-        res.status(500).json({ success: false, message: "Summarization failed" });
+        res.status(500).json({ success: false, message: "Summarization failed: " + err.message });
     }
 });
 

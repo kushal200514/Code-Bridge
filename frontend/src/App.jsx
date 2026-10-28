@@ -77,6 +77,7 @@ function App() {
     const [downloadedIds, setDownloadedIds] = useState(new Set());
     const [activeSummary, setActiveSummary] = useState(null);
     const [consentModalFile, setConsentModalFile] = useState(null);
+    const [summarizingId, setSummarizingId] = useState(null);
 
     const socketRef = useRef(null);
 
@@ -467,29 +468,58 @@ function App() {
     };
 
     // ==================================================
-    // 6. AI Summarization (Consent-Based)
+    // 6. AI Summarization (Whichever File Uploaded)
     // ==================================================
-    const handleRequestSummary = async (file) => {
-        setConsentModalFile(file);
+    const handleRequestSummary = async (file, localFileObject = null) => {
+        const activeTransferId = transfer?.transfer_id || receiverTransfer?.transfer_id;
+        const fileId = file.id || file._id;
+        const identifier = fileId || file.name;
+
+        try {
+            setSummarizingId(identifier);
+            setError("");
+
+            const payload = {
+                consentGiven: true,
+                filename: file.name || file.originalName
+            };
+
+            // If a local browser File object is available (e.g. preview before/during upload)
+            if (localFileObject && typeof localFileObject.slice === "function") {
+                try {
+                    const slice = localFileObject.slice(0, 16384);
+                    const text = await slice.text();
+                    if (text && !text.includes("\0")) {
+                        payload.textContent = text;
+                    }
+                } catch {
+                    // Ignore local read errors safely
+                }
+            }
+
+            if (fileId && activeTransferId) {
+                payload.transferId = activeTransferId;
+                payload.fileId = fileId;
+            }
+
+            const res = await axios.post(`${API_URL}/api/ai/summarize`, payload);
+            if (res.data?.success && res.data?.summary) {
+                setActiveSummary(res.data.summary);
+            } else {
+                setError("Unable to generate summary for this file.");
+            }
+        } catch (err) {
+            console.error("Summarization error:", err);
+            setError(err.response?.data?.message || "Failed to generate AI summary.");
+        } finally {
+            setSummarizingId(null);
+        }
     };
 
     const confirmSummarization = async () => {
-        if (!consentModalFile || !receiverTransfer) return;
-
-        try {
-            setLoading(true);
-            const res = await axios.post(`${API_URL}/api/ai/summarize`, {
-                transferId: receiverTransfer.transfer_id,
-                fileId: consentModalFile.id,
-                consentGiven: true
-            });
-            setActiveSummary(res.data.summary);
-            setConsentModalFile(null);
-        } catch (err) {
-            setError(err.response?.data?.message || "Summarization failed.");
-        } finally {
-            setLoading(false);
-        }
+        if (!consentModalFile) return;
+        await handleRequestSummary(consentModalFile);
+        setConsentModalFile(null);
     };
 
     // ==================================================
@@ -1005,13 +1035,25 @@ function App() {
                                                     </div>
                                                 </div>
 
-                                                <button
-                                                    className="btn-danger"
-                                                    style={{ padding: "4px 8px", fontSize: "12px" }}
-                                                    onClick={() => setSelectedFiles(selectedFiles.filter((_, i) => i !== idx))}
-                                                >
-                                                    Remove
-                                                </button>
+                                                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                                    <button
+                                                        type="button"
+                                                        className="action-pill-btn"
+                                                        style={{ padding: "4px 10px", fontSize: "12px", background: "rgba(0, 242, 254, 0.08)", borderColor: "rgba(0, 242, 254, 0.25)", color: "var(--accent-cyan)" }}
+                                                        onClick={() => handleRequestSummary({ name: file.name, size: file.size, category: "Documents" }, file)}
+                                                        disabled={summarizingId === file.name}
+                                                        title="Preview AI Summary for this document"
+                                                    >
+                                                        {summarizingId === file.name ? "⏳ Analyzing..." : "✨ Preview Summary"}
+                                                    </button>
+                                                    <button
+                                                        className="btn-danger"
+                                                        style={{ padding: "4px 8px", fontSize: "12px" }}
+                                                        onClick={() => setSelectedFiles(selectedFiles.filter((_, i) => i !== idx))}
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </div>
                                             </div>
                                         );
                                     })}
@@ -1048,9 +1090,21 @@ function App() {
                                                 </div>
                                             </div>
 
-                                            <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
-                                                {downloadedIds.has(file.id) ? "Downloaded ✓" : "Waiting for download"}
-                                            </span>
+                                            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                                                <button
+                                                    type="button"
+                                                    className="action-pill-btn"
+                                                    style={{ padding: "6px 12px", fontSize: "12px", background: "rgba(0, 242, 254, 0.08)", borderColor: "rgba(0, 242, 254, 0.25)", color: "var(--accent-cyan)" }}
+                                                    onClick={() => handleRequestSummary(file)}
+                                                    disabled={summarizingId === file.id}
+                                                    title="Generate AI Summary for this file"
+                                                >
+                                                    {summarizingId === file.id ? "⏳ Analyzing..." : "✨ AI Summarize"}
+                                                </button>
+                                                <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+                                                    {downloadedIds.has(file.id) ? "Downloaded ✓" : "Waiting for download"}
+                                                </span>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -1339,7 +1393,6 @@ function App() {
                                         ) : (
                                             filteredFiles.map(file => {
                                                 const isDownloaded = downloadedIds.has(file.id) || file.downloaded;
-                                                const isText = file.category === "Documents" || file.category === "Code";
 
                                                 return (
                                                     <div className="file-row" key={file.id}>
@@ -1356,14 +1409,15 @@ function App() {
                                                         </div>
 
                                                         <div className="file-actions-group">
-                                                            {isText && !isDownloaded && (
-                                                                <button
-                                                                    className="btn-secondary btn-small"
-                                                                    onClick={() => handleRequestSummary(file)}
-                                                                >
-                                                                    ✨ Summarize
-                                                                </button>
-                                                            )}
+                                                            <button
+                                                                type="button"
+                                                                className="btn-secondary btn-small"
+                                                                onClick={() => handleRequestSummary(file)}
+                                                                disabled={summarizingId === file.id}
+                                                                title="Generate AI Summary for this file"
+                                                            >
+                                                                {summarizingId === file.id ? "⏳ Analyzing..." : "✨ AI Summarize"}
+                                                            </button>
 
                                                             <button
                                                                 className={isDownloaded ? "btn-secondary btn-small" : "btn-primary btn-small"}
@@ -1475,25 +1529,45 @@ function App() {
                     <div className="modal-overlay" onClick={() => setActiveSummary(null)}>
                         <div className="modal-content" onClick={e => e.stopPropagation()}>
                             <div className="modal-header">
-                                <h3>📄 Document Summary: {activeSummary.filename}</h3>
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <span style={{ fontSize: "22px" }}>✨</span>
+                                    <div>
+                                        <h3 style={{ margin: 0, fontSize: "18px" }}>AI Summary: {activeSummary.filename}</h3>
+                                        <span className="tag-badge" style={{ fontSize: "11px", marginTop: "4px", display: "inline-block" }}>
+                                            {activeSummary.provider === "openai" ? "🤖 OpenAI GPT-4" : activeSummary.provider === "e2ee-metadata" ? "🔒 Zero-Knowledge Metadata" : activeSummary.provider === "binary-metadata" ? "📊 Binary Asset Analysis" : "⚡ Smart AI Heuristic"}
+                                        </span>
+                                    </div>
+                                </div>
                                 <button className="close-btn" onClick={() => setActiveSummary(null)}>✕</button>
                             </div>
-                            <div style={{ background: "var(--bg-input)", padding: "16px", borderRadius: "10px", fontSize: "14px", lineHeight: 1.6, marginBottom: "16px" }}>
+                            <div style={{ background: "var(--bg-input)", border: "1px solid var(--border-subtle)", padding: "16px", borderRadius: "10px", fontSize: "14px", lineHeight: 1.6, marginBottom: "16px", color: "var(--text-primary)" }}>
                                 {activeSummary.summary}
                             </div>
                             {activeSummary.keyPoints && activeSummary.keyPoints.length > 0 && (
                                 <div style={{ marginBottom: "20px" }}>
-                                    <h4 style={{ fontSize: "13px", color: "var(--accent-blue)", marginBottom: "8px" }}>Key Points</h4>
-                                    <ul style={{ fontSize: "13px", color: "var(--text-secondary)", paddingLeft: "18px" }}>
+                                    <h4 style={{ fontSize: "13px", color: "var(--accent-cyan)", marginBottom: "8px" }}>Key Takeaways</h4>
+                                    <ul style={{ fontSize: "13px", color: "var(--text-secondary)", paddingLeft: "18px", lineHeight: 1.6 }}>
                                         {activeSummary.keyPoints.map((pt, i) => (
-                                            <li key={i} style={{ marginBottom: "4px" }}>{pt}</li>
+                                            <li key={i} style={{ marginBottom: "6px" }}>{pt}</li>
                                         ))}
                                     </ul>
                                 </div>
                             )}
-                            <button className="btn-secondary" onClick={() => setActiveSummary(null)}>
-                                Close
-                            </button>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "12px" }}>
+                                <button
+                                    type="button"
+                                    className="action-pill-btn"
+                                    onClick={() => copyToClipboard(
+                                        `${activeSummary.filename} Summary:\n${activeSummary.summary}\n\nKey Points:\n${activeSummary.keyPoints?.map(p => "• " + p).join("\n") || ""}`,
+                                        "Summary copied!"
+                                    )}
+                                >
+                                    📋 Copy Summary
+                                </button>
+                                <button className="btn-secondary" onClick={() => setActiveSummary(null)}>
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

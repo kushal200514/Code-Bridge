@@ -154,6 +154,22 @@ describe("6. AI Assistant Query Matching", () => {
     });
 });
 
+describe("6B. AI Document Summarization", () => {
+    test("summarizes text document into executive overview and key points", async () => {
+        const sampleText = "CodeBridge is an ephemeral temporary file sharing application. It uses a strict 10-minute lifecycle to wipe files permanently. All tokens are cryptographically hashed and compared in constant time. Senders must explicitly approve receivers before files can be transferred.";
+        const summary = await aiService.summarizeText(sampleText, "overview.txt");
+        assert.ok(summary.summary);
+        assert.ok(Array.isArray(summary.keyPoints));
+        assert.strictEqual(summary.filename, "overview.txt");
+    });
+
+    test("handles empty document gracefully", async () => {
+        const summary = await aiService.summarizeText("", "empty.txt");
+        assert.strictEqual(summary.summary, "Empty document.");
+        assert.deepStrictEqual(summary.keyPoints, []);
+    });
+});
+
 describe("7. End-to-End Encryption (AES-256-GCM) Threat Model Simulation", () => {
     // Simulates the exact Web Crypto AES-GCM workflow used in client
     function simulateClientEncryption(plaintextBuffer, keyBytes) {
